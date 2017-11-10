@@ -21,11 +21,7 @@ export class BatchSummary {
 
 // Query Execution Complete Notification ----------------------------------------------------------
 export namespace QueryExecuteCompleteNotification {
-    export const type: NotificationType<QueryExecuteCompleteNotificationResult> = {
-        get method(): string {
-            return 'query/complete';
-        }
-    };
+    export const type = new NotificationType<QueryExecuteCompleteNotificationResult, void>('query/complete');
 }
 
 export class QueryExecuteCompleteNotificationResult {
@@ -41,29 +37,17 @@ export class QueryExecuteBatchNotificationParams {
 
 // Query Batch Start Notification -----------------------------------------------------------------
 export namespace QueryExecuteBatchStartNotification {
-    export const type: NotificationType<QueryExecuteBatchNotificationParams> = {
-        get method(): string {
-            return 'query/batchStart';
-        }
-    };
+    export const type = new NotificationType<QueryExecuteBatchNotificationParams, void>('query/batchStart');
 }
 
 // Query Batch Complete Notification --------------------------------------------------------------
 export namespace QueryExecuteBatchCompleteNotification {
-    export const type: NotificationType<QueryExecuteBatchNotificationParams> = {
-        get method(): string {
-            return 'query/batchComplete';
-        }
-    };
+    export const type = new NotificationType<QueryExecuteBatchNotificationParams, void>('query/batchComplete');
 }
 
 // Query ResultSet Complete Notification -----------------------------------------------------------
 export namespace QueryExecuteResultSetCompleteNotification {
-    export const type: NotificationType<QueryExecuteResultSetCompleteNotificationParams> = {
-        get method(): string {
-            return 'query/resultSetComplete';
-        }
-    };
+    export const type = new NotificationType<QueryExecuteResultSetCompleteNotificationParams, void>('query/resultSetComplete');
 }
 
 export class QueryExecuteResultSetCompleteNotificationParams {
@@ -74,11 +58,7 @@ export class QueryExecuteResultSetCompleteNotificationParams {
 
 // Query Message Notification ---------------------------------------------------------------------
 export namespace QueryExecuteMessageNotification {
-    export const type: NotificationType<QueryExecuteMessageParams> = {
-        get method(): string {
-            return 'query/message';
-        }
-    };
+    export const type = new NotificationType<QueryExecuteMessageParams, void>('query/message');
 }
 
 export class QueryExecuteMessageParams {
@@ -88,19 +68,11 @@ export class QueryExecuteMessageParams {
 
 // Query Execution Request ------------------------------------------------------------------------
 export namespace QueryExecuteRequest {
-    export const type: RequestType<QueryExecuteParams, QueryExecuteResult, void> = {
-        get method(): string {
-            return 'query/executeDocumentSelection';
-        }
-    };
+    export const type = new RequestType<QueryExecuteParams, QueryExecuteResult, void, void>('query/executeDocumentSelection');
 }
 
 export namespace QueryExecuteStatementRequest {
-    export const type: RequestType<QueryExecuteStatementParams, QueryExecuteResult, void> = {
-        get method(): string {
-            return 'query/executedocumentstatement';
-        }
-    };
+    export const type = new RequestType<QueryExecuteStatementParams, QueryExecuteResult, void, void>('query/executedocumentstatement');
 }
 
 export class QueryExecuteParams {
@@ -118,11 +90,7 @@ export class QueryExecuteResult {}
 
 // --------------------------------- < Query Results Request > ------------------------------------------
 export namespace QueryExecuteSubsetRequest {
-    export const type: RequestType<QueryExecuteSubsetParams, QueryExecuteSubsetResult, void> = {
-                                                                                        get method(): string {
-                                                                                            return 'query/subset';
-                                                                                        }
-                                                                                    };
+    export const type = new RequestType<QueryExecuteSubsetParams, QueryExecuteSubsetResult, void, void>('query/subset');
 }
 
 export class QueryExecuteSubsetParams {

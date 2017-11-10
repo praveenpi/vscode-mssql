@@ -506,7 +506,7 @@
           "type": "boolean",
           "description": "%mssql.format.alignColumnDefinitionsInColumns%",
           "default": false,
-          "scope": "window"
+          "scope": "resource"
         },
         "mssql.format.datatypeCasing": {
           "type": "string",
@@ -517,7 +517,7 @@
             "uppercase",
             "lowercase"
           ],
-          "scope": "window"
+          "scope": "resource"
         },
         "mssql.format.keywordCasing": {
           "type": "string",
@@ -528,19 +528,19 @@
             "uppercase",
             "lowercase"
           ],
-          "scope": "window"
+          "scope": "resource"
         },
         "mssql.format.placeCommasBeforeNextStatement": {
           "type": "boolean",
           "description": "%mssql.format.placeCommasBeforeNextStatement%",
           "default": false,
-          "scope": "window"
+          "scope": "resource"
         },
         "mssql.format.placeSelectStatementReferencesOnNewLine": {
           "type": "boolean",
           "description": "%mssql.format.placeSelectStatementReferencesOnNewLine%",
           "default": false,
-          "scope": "window"
+          "scope": "resource"
         },
         "mssql.applyLocalization": {
           "type": "boolean",

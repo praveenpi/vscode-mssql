@@ -152,7 +152,7 @@ export default class ResultsSerializer {
                                                                                                                                         Thenable<void> {
         const self = this;
         let saveResultsParams =  self.getParameters( filePath, batchIndex, resultSetNo, format, selection);
-        let type: RequestType<Contracts.SaveResultsRequestParams, Contracts.SaveResultRequestResult, void>;
+        let type: RequestType<Contracts.SaveResultsRequestParams, Contracts.SaveResultRequestResult, void, void>;
         if (format === 'csv') {
             type = Contracts.SaveResultsAsCsvRequest.type;
         } else if (format === 'json') {

@@ -21,17 +21,17 @@
 // };
 
 // Declaring the following because the code gets compiled with es5, which lack definitions for console and timers.
-declare var console: {
-    info(message?: any, ...optionalParams: any[]): void;
-    profile(reportName?: string): void;
-    assert(test?: boolean, message?: string, ...optionalParams: any[]): void;
-    clear(): void;
-    dir(value?: any, ...optionalParams: any[]): void;
-    warn(message?: any, ...optionalParams: any[]): void;
-    error(message?: any, ...optionalParams: any[]): void;
-    log(message?: any, ...optionalParams: any[]): void;
-    profileEnd(): void;
-};
+// // declare var console: {
+// //     info(message?: any, ...optionalParams: any[]): void;
+// //     profile(reportName?: string): void;
+// //     assert(test?: boolean, message?: string, ...optionalParams: any[]): void;
+// //     clear(): void;
+// //     dir(value?: any, ...optionalParams: any[]): void;
+// //     warn(message?: any, ...optionalParams: any[]): void;
+// //     error(message?: any, ...optionalParams: any[]): void;
+// //     log(message?: any, ...optionalParams: any[]): void;
+// //     profileEnd(): void;
+// // };
 
 declare function clearTimeout(handle: number): void;
 declare function setTimeout(handler: any, timeout?: any, ...args: any[]): NodeJS.Timer;

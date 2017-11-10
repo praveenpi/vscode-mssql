@@ -66,7 +66,7 @@ suite('ConnectionStore tests', () => {
     test('formatCredentialId should handle server, DB and username correctly', () => {
         try {
             ConnectionStore.formatCredentialId('', '', '');
-            assert.fail('Expected exception to be thrown when server name missing');
+            assert.fail(undefined, new Error(), 'Expected exception to be thrown when server name missing');
         } catch (e) {
             // Expected
         }
