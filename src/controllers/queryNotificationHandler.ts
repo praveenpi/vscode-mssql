@@ -34,11 +34,11 @@ export class QueryNotificationHandler {
 
     // register the handler to handle notifications for queries
     private initialize(): void {
-        SqlToolsServiceClient.instance.onNotification(QueryExecuteCompleteNotification.type, this.handleQueryCompleteNotification());
-        SqlToolsServiceClient.instance.onNotification(QueryExecuteBatchStartNotification.type, this.handleBatchStartNotification());
-        SqlToolsServiceClient.instance.onNotification(QueryExecuteBatchCompleteNotification.type, this.handleBatchCompleteNotification());
-        SqlToolsServiceClient.instance.onNotification(QueryExecuteResultSetCompleteNotification.type, this.handleResultSetCompleteNotification());
-        SqlToolsServiceClient.instance.onNotification(QueryExecuteMessageNotification.type, this.handleMessageNotification());
+        SqlToolsServiceClient.client.onNotification(QueryExecuteCompleteNotification.type, this.handleQueryCompleteNotification());
+        SqlToolsServiceClient.client.onNotification(QueryExecuteBatchStartNotification.type, this.handleBatchStartNotification());
+        SqlToolsServiceClient.client.onNotification(QueryExecuteBatchCompleteNotification.type, this.handleBatchCompleteNotification());
+        SqlToolsServiceClient.client.onNotification(QueryExecuteResultSetCompleteNotification.type, this.handleResultSetCompleteNotification());
+        SqlToolsServiceClient.client.onNotification(QueryExecuteMessageNotification.type, this.handleMessageNotification());
     }
 
     // Registers queryRunners with their uris to distribute notifications.

@@ -14,7 +14,7 @@ import SqlToolsServerClient from '../languageservice/serviceclient';
 import { IPrompter } from '../prompts/question';
 import Telemetry from '../models/telemetry';
 import VscodeWrapper from './vscodeWrapper';
-import {NotificationHandler} from 'vscode-languageclient';
+import {NotificationHandler, LanguageClient} from 'vscode-languageclient';
 import {Runtime, PlatformInformation} from '../models/platform';
 
 let opener = require('opener');
@@ -88,7 +88,7 @@ export default class ConnectionManager {
     constructor(context: vscode.ExtensionContext,
                 statusView: StatusView,
                 prompter: IPrompter,
-                private _client?: SqlToolsServerClient,
+                private _client?: LanguageClient,
                 private _vscodeWrapper?: VscodeWrapper,
                 private _connectionStore?: ConnectionStore,
                 private _connectionUI?: ConnectionUI) {
@@ -98,7 +98,7 @@ export default class ConnectionManager {
         this._connections = {};
 
         if (!this.client) {
-            this.client = SqlToolsServerClient.instance;
+            this.client = SqlToolsServerClient.client;
         }
         if (!this.vscodeWrapper) {
             this.vscodeWrapper = new VscodeWrapper();
@@ -136,14 +136,14 @@ export default class ConnectionManager {
     /**
      * Exposed for testing purposes
      */
-    public get client(): SqlToolsServerClient {
+    public get client(): LanguageClient {
         return this._client;
     }
 
     /**
      * Exposed for testing purposes
      */
-    public set client(client: SqlToolsServerClient) {
+    public set client(client: LanguageClient) {
         this._client = client;
     }
 
@@ -445,7 +445,7 @@ export default class ConnectionManager {
                     return false;
                 }
                 this.statusView.languageFlavorChanged(fileUri, flavor);
-                SqlToolsServerClient.instance.sendNotification(LanguageServiceContracts.LanguageFlavorChangedNotification.type,
+                SqlToolsServerClient.client.sendNotification(LanguageServiceContracts.LanguageFlavorChangedNotification.type,
                     <LanguageServiceContracts.DidChangeLanguageFlavorParams> {
                     uri: fileUri,
                     language: 'sql',

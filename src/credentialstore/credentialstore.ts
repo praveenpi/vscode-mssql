@@ -7,6 +7,7 @@
 import * as Contracts from '../models/contracts';
 import { ICredentialStore } from './icredentialstore';
 import SqlToolsServerClient from '../languageservice/serviceclient';
+import { LanguageClient } from 'vscode-languageclient';
 
 /**
  * Implements a credential storage for Windows, Mac (darwin), or Linux.
@@ -15,9 +16,9 @@ import SqlToolsServerClient from '../languageservice/serviceclient';
  */
 export class CredentialStore implements ICredentialStore {
 
-    constructor(private _client?: SqlToolsServerClient) {
+    constructor(private _client?: LanguageClient) {
         if (!this._client) {
-            this._client = SqlToolsServerClient.instance;
+            this._client = SqlToolsServerClient.client;
         }
     }
 

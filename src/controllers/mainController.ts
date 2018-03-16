@@ -24,6 +24,7 @@ import * as path from 'path';
 import fs = require('fs');
 
 let opener = require('opener');
+const config = require('../config.json');
 
 /**
  * The main controller class that initializes the extension
@@ -142,10 +143,10 @@ export default class MainController implements vscode.Disposable {
 
         // initialize language service client
         return new Promise<boolean>( (resolve, reject) => {
-                // Initialize telemetry
-                Telemetry.initialize(self._context);
+            // Initialize telemetry
+            Telemetry.initialize(self._context);
 
-                SqlToolsServerClient.instance.initialize(self._context).then(serverResult => {
+            SqlToolsServerClient.initialize(config, this._vscodeWrapper).then(serverResult => {
 
                 // Init status bar
                 self._statusview = new StatusView(self._vscodeWrapper);
@@ -274,7 +275,7 @@ export default class MainController implements vscode.Disposable {
             const fileUri = this._vscodeWrapper.activeTextEditorUri;
             if (fileUri && this._vscodeWrapper.isEditingSqlFile) {
                 this._statusview.languageServiceStatusChanged(fileUri, LocalizedConstants.updatingIntelliSenseStatus);
-                SqlToolsServerClient.instance.sendNotification(RebuildIntelliSenseNotification.type, {
+                SqlToolsServerClient.client.sendNotification(RebuildIntelliSenseNotification.type, {
                     ownerUri: fileUri
                 });
             } else {

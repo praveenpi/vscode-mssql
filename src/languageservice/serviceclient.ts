@@ -4,10 +4,12 @@
  * ------------------------------------------------------------------------------------------ */
 'use strict';
 
-import { ExtensionContext, workspace, window, OutputChannel, languages } from 'vscode';
+import { ExtensionContext, workspace, window, OutputChannel, languages, env } from 'vscode';
 import { LanguageClient, LanguageClientOptions, ServerOptions,
     TransportKind, RequestType, NotificationType, NotificationHandler,
     ErrorAction, CloseAction } from 'vscode-languageclient';
+
+import { ServerProvider, IConfig, Events } from 'service-downloader';
 
 import VscodeWrapper from '../controllers/vscodeWrapper';
 import Telemetry from '../models/telemetry';
@@ -15,7 +17,6 @@ import * as Utils from '../models/utils';
 import {VersionRequest} from '../models/contracts';
 import {Logger} from '../models/logger';
 import Constants = require('../constants/constants');
-import ServerProvider from './server';
 import ServiceDownloadProvider from './serviceDownloadProvider';
 import DecompressProvider from './decompressProvider';
 import HttpClient from './httpClient';
@@ -24,11 +25,10 @@ import {PlatformInformation} from '../models/platform';
 import {ServerInitializationResult, ServerStatusView} from './serverStatus';
 import StatusView from '../views/statusView';
 import * as LanguageServiceContracts from '../models/contracts/languageService';
-import { IConfig } from '../languageservice/interfaces';
-let vscode = require('vscode');
-let opener = require('opener');
+const opener = require('opener');
 
-let _channel: OutputChannel = undefined;
+const channel = window.createOutputChannel(Constants.serviceInitializingOutputChannelName);
+let didInstall = false;
 
 /**
  * @interface IMessage
@@ -107,287 +107,185 @@ class LanguageClientErrorHandler {
 // The Service Client class handles communication with the VS Code LanguageClient
 export default class SqlToolsServiceClient {
     // singleton instance
-    private static _instance: SqlToolsServiceClient = undefined;
+    private static _instance: LanguageClient;
 
-    // VS Code Language Client
-    private _client: LanguageClient = undefined;
-    // getter method for the Language Client
-    private get client(): LanguageClient {
-        return this._client;
+    public static get client(): LanguageClient {
+        return SqlToolsServiceClient._instance;
     }
 
-    private set client(client: LanguageClient) {
-        this._client = client;
-    }
-
-    constructor(
-        private _config: IConfig,
-        private _server: ServerProvider,
-        private _logger: Logger,
-        private _statusView: StatusView,
-        private _vscodeWrapper: VscodeWrapper) {
-    }
-
-    // gets or creates the singleton SQL Tools service client instance
-    public static get instance(): SqlToolsServiceClient {
-        if (this._instance === undefined) {
-            let config = new ExtConfig();
-            _channel = window.createOutputChannel(Constants.serviceInitializingOutputChannelName);
-            let logger = new Logger(text => _channel.append(text));
-            let serverStatusView = new ServerStatusView();
-            let httpClient = new HttpClient();
-            let decompressProvider = new DecompressProvider();
-            let downloadProvider = new ServiceDownloadProvider(config, logger, serverStatusView, httpClient,
-            decompressProvider);
-            let serviceProvider = new ServerProvider(downloadProvider, config, serverStatusView);
-            let vscodeWrapper = new VscodeWrapper();
-            let statusView = new StatusView(vscodeWrapper);
-            this._instance = new SqlToolsServiceClient(config, serviceProvider, logger, statusView, vscodeWrapper);
-        }
-        return this._instance;
-    }
-
-    // initialize the SQL Tools Service Client instance by launching
-    // out-of-proc server through the LanguageClient
-    public initialize(context: ExtensionContext): Promise<ServerInitializationResult> {
-         this._logger.appendLine(Constants.serviceInitializing);
-
-         return PlatformInformation.GetCurrent().then( platformInfo => {
-            return this.initializeForPlatform(platformInfo, context);
-         });
-    }
-
-    public initializeForPlatform(platformInfo: PlatformInformation, context: ExtensionContext): Promise<ServerInitializationResult> {
-         return new Promise<ServerInitializationResult>( (resolve, reject) => {
-            this._logger.appendLine(Constants.commandsNotAvailableWhileInstallingTheService);
-            this._logger.appendLine();
-            this._logger.append(`Platform: ${platformInfo.toString()}`);
+    public static initialize(config: IConfig, vscodeWrapper: VscodeWrapper): Promise<ServerInitializationResult> {
+        return PlatformInformation.GetCurrent().then(platformInfo => {
+            channel.appendLine(Constants.commandsNotAvailableWhileInstallingTheService);
+            channel.appendLine('');
+            channel.append(`Platform: ${platformInfo.toString()}`);
             if (!platformInfo.isValidRuntime()) {
                 Utils.showErrorMsg(Constants.unsupportedPlatformErrorMessage);
                 Telemetry.sendTelemetryEvent('UnsupportedPlatform', {platform: platformInfo.toString()} );
-                reject('Invalid Platform');
+                throw new Error('Invalid Platform');
             } else {
                 if (platformInfo.runtimeId) {
-                    this._logger.appendLine(` (${platformInfo.getRuntimeDisplayName()})`);
+                    channel.appendLine(` (${platformInfo.getRuntimeDisplayName()})`);
                 } else {
-                    this._logger.appendLine();
+                    channel.appendLine('');
                 }
-                this._logger.appendLine();
+
+                channel.appendLine('');
+
+                let serverProvider = new ServerProvider(config);
+
+                serverProvider.eventEmitter.onAny(generateHandleServerProviderEvent());
 
                 // For macOS we need to ensure the tools service version is set appropriately
-                this.updateServiceVersion(platformInfo);
+                // this.updateServiceVersion(platformInfo);
 
-                this._server.getServerPath(platformInfo.runtimeId).then(serverPath => {
-                    if (serverPath === undefined) {
-                        // Check if the service already installed and if not open the output channel to show the logs
-                        if (_channel !== undefined) {
-                            _channel.show();
-                        }
-                        this._server.downloadServerFiles(platformInfo.runtimeId).then ( installedServerPath => {
-                            this.initializeLanguageClient(installedServerPath, context);
-                            resolve(new ServerInitializationResult(true, true, installedServerPath));
-                        }).catch(downloadErr => {
-                            reject(downloadErr);
-                        });
-                    } else {
-                        this.initializeLanguageClient(serverPath, context);
-                        resolve(new ServerInitializationResult(false, true, serverPath));
-                    }
-                }).catch(err => {
-                    Utils.logDebug(Constants.serviceLoadingFailed + ' ' + err );
-                    Utils.showErrorMsg(Constants.serviceLoadingFailed);
-                    Telemetry.sendTelemetryEvent('ServiceInitializingFailed');
-                    reject(err);
+                initializeLanguageConfiguration();
+
+                return serverProvider.getOrDownloadServer().then(e => {
+                    let serverOptions: ServerOptions = createServerOptions(e);
+                    let clientOptions: LanguageClientOptions = {
+                        documentSelector: ['sql'],
+                        synchronize: {
+                            configurationSection: 'mssql'
+                        },
+                        errorHandler: new LanguageClientErrorHandler(vscodeWrapper)
+                    };
+
+                    SqlToolsServiceClient._instance = new LanguageClient(Constants.sqlToolsServiceName, serverOptions, clientOptions);
+                    SqlToolsServiceClient.client.onReady().then(() => {
+                        checkServiceCompatibility();
+                    });
+
+                    SqlToolsServiceClient.client.onNotification(LanguageServiceContracts.TelemetryNotification.type, handleLanguageServiceTelemetryNotification());
+                    SqlToolsServiceClient.client.onNotification(LanguageServiceContracts.StatusChangedNotification.type, handleLanguageServiceStatusNotification());
+
+                    return new ServerInitializationResult(true);
                 });
             }
         });
     }
+}
 
-    private updateServiceVersion(platformInfo: PlatformInformation): void {
-        if (platformInfo.isMacOS() && platformInfo.isMacVersionLessThan('10.12.0')) {
-            // Version 1.0 is required as this is the last one supporting downlevel macOS versions
-            this._config.useServiceVersion(1);
-        }
-    }
+/**
+* Initializes the SQL language configuration
+*
+* @memberOf SqlToolsServiceClient
+*/
+function initializeLanguageConfiguration(): void {
+   languages.setLanguageConfiguration('sql', {
+       comments: {
+           lineComment: '--',
+           blockComment: ['/*', '*/']
+       },
 
-    /**
-     * Gets the known service version of the backing tools service. This can be useful for filtering
-     * commands that are not supported if the tools service is below a certain known version
-     *
-     * @returns {number}
-     * @memberof SqlToolsServiceClient
-     */
-    public getServiceVersion(): number {
-        return this._config.getServiceVersion();
-    }
+       brackets: [
+           ['{', '}'],
+           ['[', ']'],
+           ['(', ')']
+       ],
 
-    /**
-     * Initializes the SQL language configuration
-     *
-     * @memberOf SqlToolsServiceClient
-     */
-    private initializeLanguageConfiguration(): void {
-        languages.setLanguageConfiguration('sql', {
-            comments: {
-                lineComment: '--',
-                blockComment: ['/*', '*/']
-            },
+       __characterPairSupport: {
+           autoClosingPairs: [
+               { open: '{', close: '}' },
+               { open: '[', close: ']' },
+               { open: '(', close: ')' },
+               { open: '"', close: '"', notIn: ['string'] },
+               { open: '\'', close: '\'', notIn: ['string', 'comment'] }
+           ]
+       }
+   });
+}
 
-            brackets: [
-                ['{', '}'],
-                ['[', ']'],
-                ['(', ')']
-            ],
+function handleLanguageServiceTelemetryNotification(): NotificationHandler<LanguageServiceContracts.TelemetryParams> {
+    return (event: LanguageServiceContracts.TelemetryParams): void => {
+        Telemetry.sendTelemetryEvent(event.params.eventName, event.params.properties, event.params.measures);
+    };
+}
 
-            __characterPairSupport: {
-                autoClosingPairs: [
-                    { open: '{', close: '}' },
-                    { open: '[', close: ']' },
-                    { open: '(', close: ')' },
-                    { open: '"', close: '"', notIn: ['string'] },
-                    { open: '\'', close: '\'', notIn: ['string', 'comment'] }
-                ]
-            }
+/**
+ * Public for testing purposes only.
+ */
+function handleLanguageServiceStatusNotification(): NotificationHandler<LanguageServiceContracts.StatusChangeParams> {
+    return (event: LanguageServiceContracts.StatusChangeParams): void => {
+        _statusView.languageServiceStatusChanged(event.ownerUri, event.status);
+    };
+}
+
+function checkServiceCompatibility(): Promise<boolean> {
+    return new Promise<boolean>((resolve, reject) => {
+        SqlToolsServiceClient.client.sendRequest(VersionRequest.type, undefined).then((result) => {
+             Utils.logDebug('sqlserverclient version: ' + result);
+
+             if (result === undefined || !result.startsWith(Constants.serviceCompatibleVersion)) {
+                 Utils.showErrorMsg(Constants.serviceNotCompatibleError);
+                 Utils.logDebug(Constants.serviceNotCompatibleError);
+                 resolve(false);
+             } else {
+                 resolve(true);
+             }
         });
+    });
+}
+
+function createServerOptions(servicePath: string): ServerOptions {
+    let serverArgs = [];
+    let serverCommand: string = servicePath;
+    if (servicePath.endsWith('.dll')) {
+        serverArgs = [servicePath];
+        serverCommand = 'dotnet';
     }
 
-    private initializeLanguageClient(serverPath: string, context: ExtensionContext): void {
-         if (serverPath === undefined) {
-                Utils.logDebug(Constants.invalidServiceFilePath);
-                throw new Error(Constants.invalidServiceFilePath);
-         } else {
-            let self = this;
-            self.initializeLanguageConfiguration();
-            let serverOptions: ServerOptions = this.createServerOptions(serverPath);
-            this.client = this.createLanguageClient(serverOptions);
-
-            if (context !== undefined) {
-                // Create the language client and start the client.
-                let disposable = this.client.start();
-
-                // Push the disposable to the context's subscriptions so that the
-                // client can be deactivated on extension deactivation
-
-                context.subscriptions.push(disposable);
-            }
-         }
-    }
-
-    private createLanguageClient(serverOptions: ServerOptions): LanguageClient {
-        // Options to control the language client
-        let clientOptions: LanguageClientOptions = {
-            documentSelector: ['sql'],
-            synchronize: {
-                configurationSection: 'mssql'
-            },
-            errorHandler: new LanguageClientErrorHandler(this._vscodeWrapper)
-        };
-
-        // cache the client instance for later use
-        let client = new LanguageClient(Constants.sqlToolsServiceName, serverOptions, clientOptions);
-        client.onReady().then( () => {
-            this.checkServiceCompatibility();
-
-        });
-        client.onNotification(LanguageServiceContracts.TelemetryNotification.type, this.handleLanguageServiceTelemetryNotification());
-        client.onNotification(LanguageServiceContracts.StatusChangedNotification.type, this.handleLanguageServiceStatusNotification());
-
-        return client;
-    }
-
-     private handleLanguageServiceTelemetryNotification(): NotificationHandler<LanguageServiceContracts.TelemetryParams> {
-        return (event: LanguageServiceContracts.TelemetryParams): void => {
-            Telemetry.sendTelemetryEvent(event.params.eventName, event.params.properties, event.params.measures);
-        };
-    }
-
-    /**
-     * Public for testing purposes only.
-     */
-    public handleLanguageServiceStatusNotification(): NotificationHandler<LanguageServiceContracts.StatusChangeParams> {
-        return (event: LanguageServiceContracts.StatusChangeParams): void => {
-            this._statusView.languageServiceStatusChanged(event.ownerUri, event.status);
-        };
-    }
-
-    private createServerOptions(servicePath): ServerOptions {
-        let serverArgs = [];
-        let serverCommand: string = servicePath;
-        if (servicePath.endsWith('.dll')) {
-            serverArgs = [servicePath];
-            serverCommand = 'dotnet';
+    // Get the extenion's configuration
+    let config = workspace.getConfiguration(Constants.extensionConfigSectionName);
+    if (config) {
+        // Enable diagnostic logging in the service if it is configured
+        let logDebugInfo = config[Constants.configLogDebugInfo];
+        if (logDebugInfo) {
+            serverArgs.push('--enable-logging');
         }
 
-        // Get the extenion's configuration
-        let config = workspace.getConfiguration(Constants.extensionConfigSectionName);
-        if (config) {
-            // Enable diagnostic logging in the service if it is configured
-            let logDebugInfo = config[Constants.configLogDebugInfo];
-            if (logDebugInfo) {
-                serverArgs.push('--enable-logging');
-            }
-
-            // Send Locale for sqltoolsservice localization
-            let applyLocalization = config[Constants.configApplyLocalization];
-            if (applyLocalization) {
-                let locale = vscode.env.language;
-                serverArgs.push('--locale');
-                serverArgs.push(locale);
-            }
-        }
-
-
-        // run the service host using dotnet.exe from the path
-        let serverOptions: ServerOptions = {  command: serverCommand, args: serverArgs, transport: TransportKind.stdio  };
-        return serverOptions;
-    }
-
-    /**
-     * Send a request to the service client
-     * @param type The of the request to make
-     * @param params The params to pass with the request
-     * @returns A thenable object for when the request receives a response
-     */
-    public sendRequest<P, R, E>(type: RequestType<P, R, E>, params?: P): Thenable<R> {
-        if (this.client !== undefined) {
-            return this.client.sendRequest(type, params);
+        // Send Locale for sqltoolsservice localization
+        let applyLocalization = config[Constants.configApplyLocalization];
+        if (applyLocalization) {
+            let locale = env.language;
+            serverArgs.push('--locale');
+            serverArgs.push(locale);
         }
     }
 
-    /**
-     * Send a notification to the service client
-     * @param params The params to pass with the notification
-     */
-    public sendNotification<P>(type: NotificationType<P>, params?: P): void {
-        if (this.client !== undefined) {
-            this.client.sendNotification(type, params);
-        }
-    }
 
-    /**
-     * Register a handler for a notification type
-     * @param type The notification type to register the handler for
-     * @param handler The handler to register
-     */
-    public onNotification<P>(type: NotificationType<P>, handler: NotificationHandler<P>): void {
-        if (this._client !== undefined) {
-             return this.client.onNotification(type, handler);
-        }
-    }
+    // run the service host using dotnet.exe from the path
+    let serverOptions: ServerOptions = {  command: serverCommand, args: serverArgs, transport: TransportKind.stdio  };
+    return serverOptions;
+}
 
-    public checkServiceCompatibility(): Promise<boolean> {
-        return new Promise<boolean>((resolve, reject) => {
-            this._client.sendRequest(VersionRequest.type, undefined).then((result) => {
-                 Utils.logDebug('sqlserverclient version: ' + result);
-
-                 if (result === undefined || !result.startsWith(Constants.serviceCompatibleVersion)) {
-                     Utils.showErrorMsg(Constants.serviceNotCompatibleError);
-                     Utils.logDebug(Constants.serviceNotCompatibleError);
-                     resolve(false);
-                 } else {
-                     resolve(true);
-                 }
-            });
-        });
-    }
+function generateHandleServerProviderEvent() {
+	let dots = 0;
+	return (e: string, ...args: any[]) => {
+		channel.show();
+		// statusView.show();
+		switch (e) {
+            case Events.INSTALL_START:
+                didInstall = true;
+				channel.appendLine(`${Constants.serviceInstallingTo} ${args[0]}`);
+				// statusView.text = 'Installing Service';
+				break;
+			case Events.INSTALL_END:
+				channel.appendLine(`${Constants.serviceInstalled}`);
+				break;
+			case Events.DOWNLOAD_START:
+				channel.appendLine(`${Constants.serviceDownloading} ${args[0]}`);
+				channel.append(`(${Math.ceil(args[1] / 1024)} KB)`);
+				// statusView.text = 'Downloading Service';
+				break;
+			case Events.DOWNLOAD_PROGRESS:
+				let newDots = Math.ceil(args[0] / 5);
+				if (newDots > dots) {
+					channel.append('.'.repeat(newDots - dots));
+					dots = newDots;
+				}
+				break;
+			case Events.DOWNLOAD_END:
+				break;
+		}
+	};
 }

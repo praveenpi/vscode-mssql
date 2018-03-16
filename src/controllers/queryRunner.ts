@@ -19,6 +19,7 @@ import Constants = require('../constants/constants');
 import LocalizedConstants = require('../constants/localizedConstants');
 import * as Utils from './../models/utils';
 import * as os from 'os';
+import { LanguageClient } from 'vscode-languageclient/lib/main';
 
 const ncp = require('copy-paste');
 
@@ -46,11 +47,11 @@ export default class QueryRunner {
     constructor(private _ownerUri: string,
                 private _editorTitle: string,
                 private _statusView: StatusView,
-                private _client?: SqlToolsServerClient,
+                private _client?: LanguageClient,
                 private _notificationHandler?: QueryNotificationHandler,
                 private _vscodeWrapper?: VscodeWrapper) {
         if (!_client) {
-            this._client = SqlToolsServerClient.instance;
+            this._client = SqlToolsServerClient.client;
         }
 
         if (!_notificationHandler) {
