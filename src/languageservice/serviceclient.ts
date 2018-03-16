@@ -28,6 +28,7 @@ import * as LanguageServiceContracts from '../models/contracts/languageService';
 const opener = require('opener');
 
 const channel = window.createOutputChannel(Constants.serviceInitializingOutputChannelName);
+const statusView = new StatusView();
 let didInstall = false;
 
 /**
@@ -206,7 +207,7 @@ function handleLanguageServiceTelemetryNotification(): NotificationHandler<Langu
  */
 function handleLanguageServiceStatusNotification(): NotificationHandler<LanguageServiceContracts.StatusChangeParams> {
     return (event: LanguageServiceContracts.StatusChangeParams): void => {
-        _statusView.languageServiceStatusChanged(event.ownerUri, event.status);
+        statusView.languageServiceStatusChanged(event.ownerUri, event.status);
     };
 }
 
