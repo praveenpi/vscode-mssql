@@ -5,7 +5,7 @@ import { IConnectionCredentials, IConnectionProfile, AuthenticationTypes } from 
 import { ConnectionStore } from './connectionStore';
 import * as utils from './utils';
 import { QuestionTypes, IQuestion, IPrompter, INameValueChoice } from '../prompts/question';
-import SqlToolsServerClient from '../languageservice/serviceclient';
+import { getServiceVersion } from '../languageservice/serviceclient';
 
 // Concrete implementation of the IConnectionCredentials interface
 export class ConnectionCredentials implements IConnectionCredentials {
@@ -188,7 +188,7 @@ export class ConnectionCredentials implements IConnectionCredentials {
                 shouldPrompt: (answers) => !connectionStringSet() && utils.isEmpty(credentials.authenticationType) && authenticationChoices.length > 1,
                 validate: (value) => {
                     if (value === utils.authTypeToString(AuthenticationTypes.Integrated)
-                        && SqlToolsServerClient.instance.getServiceVersion() === 1
+                        && getServiceVersion() === 1
                     ) {
                         return LocalizedConstants.macSierraRequiredErrorMessage;
                     }

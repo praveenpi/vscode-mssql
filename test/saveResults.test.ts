@@ -3,21 +3,21 @@ import assert = require('assert');
 import Interfaces = require('../src/models/interfaces');
 import ResultsSerializer  from './../src/models/resultsSerializer';
 import { SaveResultsAsCsvRequestParams } from './../src/models/contracts';
-import SqlToolsServerClient from './../src/languageservice/serviceclient';
 import VscodeWrapper from './../src/controllers/vscodeWrapper';
 import * as vscode from 'vscode';
 import os = require('os');
+import { LanguageClient } from 'vscode-languageclient';
 
 suite('save results tests', () => {
 
     const testFile = 'file:///my/test/file.sql';
     let fileUri: vscode.Uri;
-    let serverClient: TypeMoq.IMock<SqlToolsServerClient>;
+    let serverClient: TypeMoq.IMock<LanguageClient>;
     let vscodeWrapper: TypeMoq.IMock<VscodeWrapper>;
 
     setup(() => {
 
-        serverClient = TypeMoq.Mock.ofType(SqlToolsServerClient, TypeMoq.MockBehavior.Strict);
+        serverClient = TypeMoq.Mock.ofType(LanguageClient, TypeMoq.MockBehavior.Strict);
         vscodeWrapper = TypeMoq.Mock.ofType(VscodeWrapper);
         vscodeWrapper.setup(x => x.getConfiguration(TypeMoq.It.isAny(), TypeMoq.It.isAny())).returns(extensionName => {
             return vscode.workspace.getConfiguration(extensionName);

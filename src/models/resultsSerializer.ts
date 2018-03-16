@@ -2,7 +2,7 @@ import vscode = require('vscode');
 import Constants = require('../constants/constants');
 import LocalizedConstants = require('../constants/localizedConstants');
 import Interfaces = require('./interfaces');
-import SqlToolsServerClient from '../languageservice/serviceclient';
+import { client } from '../languageservice/serviceclient';
 import * as Contracts from '../models/contracts';
 import {RequestType, LanguageClient} from 'vscode-languageclient';
 import * as Utils from '../models/utils';
@@ -19,22 +19,16 @@ type SaveAsRequestParams =  Contracts.SaveResultsAsCsvRequestParams | Contracts.
  *  Handles save results request from the context menu of slickGrid
  */
 export default class ResultsSerializer {
-    private _client: LanguageClient;
-    private _vscodeWrapper: VscodeWrapper;
     private _uri: string;
     private _filePath: string;
 
+    constructor(private _client?: LanguageClient, private _vscodeWrapper?: VscodeWrapper) {
 
-    constructor(client?: LanguageClient, vscodeWrapper?: VscodeWrapper) {
-
-        if (client) {
+        if (!this._client) {
             this._client = client;
-        } else {
-            this._client = SqlToolsServerClient.client;
         }
-        if (vscodeWrapper) {
-            this._vscodeWrapper = vscodeWrapper;
-        } else {
+
+        if (!this._vscodeWrapper) {
             this._vscodeWrapper = new VscodeWrapper();
         }
     }

@@ -5,6 +5,7 @@ var cproc = require('child_process');
 var os = require('os');
 var del = require('del');
 var path = require('path');
+const serviceDownloader = require('service-downloader');
 
 function installSqlToolsService(platform) {
    var install = require('../out/src/languageservice/serviceInstallerUtil');

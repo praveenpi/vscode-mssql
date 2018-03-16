@@ -365,7 +365,7 @@ export class SqlOutputContentProvider implements vscode.TextDocumentContentProvi
                 Utils.logToOutputChannel(err);
             });
         }
-    };
+    }
 
     public cancelQuery(input: QueryRunner | string): void {
         let self = this;
@@ -611,7 +611,7 @@ export class SqlOutputContentProvider implements vscode.TextDocumentContentProvi
                 viewColumn = vscode.ViewColumn.Two;
             } else {
                 viewColumn = vscode.ViewColumn.Three;
-            };
+            }
         }
 
         return viewColumn;

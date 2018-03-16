@@ -5,7 +5,6 @@
 
 'use strict';
 
-import {IStatusView} from './interfaces';
 import vscode = require('vscode');
 import Constants = require('../constants/constants');
 
@@ -34,7 +33,7 @@ export class ServerInitializationResult {
 /*
 * The status class shows service installing progress in UI
 */
-export class ServerStatusView implements IStatusView, vscode.Disposable  {
+export class ServerStatusView implements vscode.Disposable  {
     private _numberOfSecondsBeforeHidingMessage = 5000;
     private _statusBarItem: vscode.StatusBarItem = undefined;
     private _progressTimerId: NodeJS.Timer;

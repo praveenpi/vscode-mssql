@@ -17,27 +17,19 @@ import * as Utils from '../models/utils';
 import {VersionRequest} from '../models/contracts';
 import {Logger} from '../models/logger';
 import Constants = require('../constants/constants');
-import ServiceDownloadProvider from './serviceDownloadProvider';
-import DecompressProvider from './decompressProvider';
-import HttpClient from './httpClient';
-import ExtConfig from  '../configurations/extConfig';
 import {PlatformInformation} from '../models/platform';
-import {ServerInitializationResult, ServerStatusView} from './serverStatus';
 import StatusView from '../views/statusView';
 import * as LanguageServiceContracts from '../models/contracts/languageService';
+import Config from '../configurations/config';
+import { ServerStatusView, ServerInitializationResult } from './serverStatus';
+import { Message } from 'vscode-jsonrpc';
 const opener = require('opener');
 
 const channel = window.createOutputChannel(Constants.serviceInitializingOutputChannelName);
 const statusView = new StatusView();
+const serverStatusView = new ServerStatusView();
+const config = new Config;
 let didInstall = false;
-
-/**
- * @interface IMessage
- */
-interface IMessage {
-    jsonrpc: string;
-}
-
 
 /**
  * Handle Language Service client errors
@@ -81,7 +73,7 @@ class LanguageClientErrorHandler {
      *
      * @memberOf LanguageClientErrorHandler
      */
-    error(error: Error, message: IMessage, count: number): ErrorAction {
+    error(error: Error, message: Message, count: number): ErrorAction {
         this.showOnErrorPrompt();
 
         // we don't retry running the service since crashes leave the extension
@@ -105,72 +97,92 @@ class LanguageClientErrorHandler {
     }
 }
 
-// The Service Client class handles communication with the VS Code LanguageClient
-export default class SqlToolsServiceClient {
-    // singleton instance
-    private static _instance: LanguageClient;
+let instance: LanguageClient;
+export const client = instance;
 
-    public static get client(): LanguageClient {
-        return SqlToolsServiceClient._instance;
+export function initialize(vscodeWrapper?: VscodeWrapper): Promise<ServerInitializationResult> {
+    if (instance) {
+        return Promise.reject('Already initalized');
     }
 
-    public static initialize(config: IConfig, vscodeWrapper: VscodeWrapper): Promise<ServerInitializationResult> {
-        return PlatformInformation.GetCurrent().then(platformInfo => {
-            channel.appendLine(Constants.commandsNotAvailableWhileInstallingTheService);
-            channel.appendLine('');
-            channel.append(`Platform: ${platformInfo.toString()}`);
-            if (!platformInfo.isValidRuntime()) {
-                Utils.showErrorMsg(Constants.unsupportedPlatformErrorMessage);
-                Telemetry.sendTelemetryEvent('UnsupportedPlatform', {platform: platformInfo.toString()} );
-                throw new Error('Invalid Platform');
+    return PlatformInformation.GetCurrent().then(platformInfo => {
+        channel.appendLine(Constants.commandsNotAvailableWhileInstallingTheService);
+        channel.appendLine('');
+        channel.append(`Platform: ${platformInfo.toString()}`);
+        if (!platformInfo.isValidRuntime()) {
+            Utils.showErrorMsg(Constants.unsupportedPlatformErrorMessage);
+            Telemetry.sendTelemetryEvent('UnsupportedPlatform', {platform: platformInfo.toString()} );
+            throw new Error('Invalid Platform');
+        } else {
+            if (platformInfo.runtimeId) {
+                channel.appendLine(` (${platformInfo.getRuntimeDisplayName()})`);
             } else {
-                if (platformInfo.runtimeId) {
-                    channel.appendLine(` (${platformInfo.getRuntimeDisplayName()})`);
-                } else {
-                    channel.appendLine('');
-                }
-
                 channel.appendLine('');
-
-                let serverProvider = new ServerProvider(config);
-
-                serverProvider.eventEmitter.onAny(generateHandleServerProviderEvent());
-
-                // For macOS we need to ensure the tools service version is set appropriately
-                // this.updateServiceVersion(platformInfo);
-
-                initializeLanguageConfiguration();
-
-                return serverProvider.getOrDownloadServer().then(e => {
-                    let serverOptions: ServerOptions = createServerOptions(e);
-                    let clientOptions: LanguageClientOptions = {
-                        documentSelector: ['sql'],
-                        synchronize: {
-                            configurationSection: 'mssql'
-                        },
-                        errorHandler: new LanguageClientErrorHandler(vscodeWrapper)
-                    };
-
-                    SqlToolsServiceClient._instance = new LanguageClient(Constants.sqlToolsServiceName, serverOptions, clientOptions);
-                    SqlToolsServiceClient.client.onReady().then(() => {
-                        checkServiceCompatibility();
-                    });
-
-                    SqlToolsServiceClient.client.onNotification(LanguageServiceContracts.TelemetryNotification.type, handleLanguageServiceTelemetryNotification());
-                    SqlToolsServiceClient.client.onNotification(LanguageServiceContracts.StatusChangedNotification.type, handleLanguageServiceStatusNotification());
-
-                    return new ServerInitializationResult(true);
-                });
             }
-        });
+
+            channel.appendLine('');
+
+            let serverProvider = new ServerProvider(config.getSqlToolsConfig());
+
+            serverProvider.eventEmitter.onAny(generateHandleServerProviderEvent());
+
+            // For macOS we need to ensure the tools service version is set appropriately
+            updateServiceVersion(platformInfo);
+
+            initializeLanguageConfiguration();
+
+            return serverProvider.getOrDownloadServer().then(e => {
+                let serverOptions: ServerOptions = createServerOptions(e);
+                let clientOptions: LanguageClientOptions = {
+                    documentSelector: ['sql'],
+                    synchronize: {
+                        configurationSection: 'mssql'
+                    },
+                    errorHandler: new LanguageClientErrorHandler(vscodeWrapper)
+                };
+
+                instance = new LanguageClient(Constants.sqlToolsServiceName, serverOptions, clientOptions);
+                client.onReady().then(() => {
+                    checkServiceCompatibility();
+                });
+
+                client.onNotification(LanguageServiceContracts.TelemetryNotification.type, handleLanguageServiceTelemetryNotification());
+                client.onNotification(LanguageServiceContracts.StatusChangedNotification.type, handleLanguageServiceStatusNotification());
+
+                return new ServerInitializationResult(true);
+            }, e => {
+                serverStatusView.serviceInstallationFailed();
+                return e;
+            });
+        }
+    });
+}
+
+function updateServiceVersion(platformInfo: PlatformInformation): void {
+    if (platformInfo.isMacOS() && platformInfo.isMacVersionLessThan('10.12.0')) {
+        // Version 1.0 is required as this is the last one supporting downlevel macOS versions
+        this._config.useServiceVersion(1);
     }
 }
 
+
 /**
-* Initializes the SQL language configuration
-*
-* @memberOf SqlToolsServiceClient
-*/
+ * Gets the known service version of the backing tools service. This can be useful for filtering
+ * commands that are not supported if the tools service is below a certain known version
+ *
+ * @returns {number}
+ * @memberof SqlToolsServiceClient
+ */
+export function getServiceVersion(): number {
+    return config.getServiceVersion();
+}
+
+
+/**
+ * Initializes the SQL language configuration
+ *
+ * @memberOf SqlToolsServiceClient
+ */
 function initializeLanguageConfiguration(): void {
    languages.setLanguageConfiguration('sql', {
        comments: {
@@ -213,7 +225,7 @@ function handleLanguageServiceStatusNotification(): NotificationHandler<Language
 
 function checkServiceCompatibility(): Promise<boolean> {
     return new Promise<boolean>((resolve, reject) => {
-        SqlToolsServiceClient.client.sendRequest(VersionRequest.type, undefined).then((result) => {
+        client.sendRequest(VersionRequest.type, undefined).then((result) => {
              Utils.logDebug('sqlserverclient version: ' + result);
 
              if (result === undefined || !result.startsWith(Constants.serviceCompatibleVersion)) {
@@ -236,16 +248,16 @@ function createServerOptions(servicePath: string): ServerOptions {
     }
 
     // Get the extenion's configuration
-    let config = workspace.getConfiguration(Constants.extensionConfigSectionName);
-    if (config) {
+    let mssqlconfig = workspace.getConfiguration(Constants.extensionConfigSectionName);
+    if (mssqlconfig) {
         // Enable diagnostic logging in the service if it is configured
-        let logDebugInfo = config[Constants.configLogDebugInfo];
+        let logDebugInfo = mssqlconfig[Constants.configLogDebugInfo];
         if (logDebugInfo) {
             serverArgs.push('--enable-logging');
         }
 
         // Send Locale for sqltoolsservice localization
-        let applyLocalization = config[Constants.configApplyLocalization];
+        let applyLocalization = mssqlconfig[Constants.configApplyLocalization];
         if (applyLocalization) {
             let locale = env.language;
             serverArgs.push('--locale');
@@ -259,34 +271,37 @@ function createServerOptions(servicePath: string): ServerOptions {
     return serverOptions;
 }
 
-function generateHandleServerProviderEvent() {
-	let dots = 0;
-	return (e: string, ...args: any[]) => {
-		channel.show();
-		// statusView.show();
-		switch (e) {
+function generateHandleServerProviderEvent(): (event: string, ...args: any[]) => void {
+    let dots = 0;
+    return (e: string, ...args: any[]) => {
+        channel.show();
+        // statusView.show();
+        switch (e) {
             case Events.INSTALL_START:
                 didInstall = true;
-				channel.appendLine(`${Constants.serviceInstallingTo} ${args[0]}`);
-				// statusView.text = 'Installing Service';
-				break;
-			case Events.INSTALL_END:
-				channel.appendLine(`${Constants.serviceInstalled}`);
-				break;
-			case Events.DOWNLOAD_START:
-				channel.appendLine(`${Constants.serviceDownloading} ${args[0]}`);
-				channel.append(`(${Math.ceil(args[1] / 1024)} KB)`);
-				// statusView.text = 'Downloading Service';
-				break;
-			case Events.DOWNLOAD_PROGRESS:
-				let newDots = Math.ceil(args[0] / 5);
-				if (newDots > dots) {
-					channel.append('.'.repeat(newDots - dots));
-					dots = newDots;
-				}
-				break;
-			case Events.DOWNLOAD_END:
-				break;
-		}
-	};
+                channel.appendLine(`${Constants.serviceInstallingTo} ${args[0]}`);
+                break;
+            case Events.INSTALL_END:
+                channel.appendLine(`${Constants.serviceInstalled}`);
+                serverStatusView.serviceInstalled();
+                break;
+            case Events.DOWNLOAD_START:
+                serverStatusView.installingService();
+                channel.appendLine(`${Constants.serviceDownloading} ${args[0]}`);
+                channel.append(`(${Math.ceil(args[1] / 1024)} KB)`);
+                break;
+            case Events.DOWNLOAD_PROGRESS:
+                let newDots = Math.ceil(args[0] / 5);
+                if (newDots > dots) {
+                    channel.append('.'.repeat(newDots - dots));
+                    dots = newDots;
+                }
+                serverStatusView.updateServiceDownloadingProgress(args[0]);
+                break;
+            case Events.DOWNLOAD_END:
+                break;
+            default:
+                break;
+        }
+    };
 }

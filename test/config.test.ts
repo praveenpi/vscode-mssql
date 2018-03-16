@@ -12,7 +12,7 @@ suite('Config Tests', () => {
     test('getSqlToolsServiceDownloadUrl should return valid value', (done) => {
         return new Promise((resolve, reject) => {
             let config = new Config();
-            let serviceDownloawUrl = config.getSqlToolsServiceDownloadUrl;
+            let serviceDownloawUrl = config.getSqlToolsConfig();
             assert.notEqual(serviceDownloawUrl, undefined);
             done();
          });

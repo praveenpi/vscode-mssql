@@ -5,7 +5,6 @@ import QueryRunner from './../src/controllers/queryRunner';
 import { QueryNotificationHandler } from './../src/controllers/queryNotificationHandler';
 import { SqlOutputContentProvider } from './../src/models/sqlOutputContentProvider';
 import * as Utils from './../src/models/utils';
-import SqlToolsServerClient from './../src/languageservice/serviceclient';
 import {
     QueryExecuteParams,
     QueryExecuteCompleteNotificationResult,
@@ -25,6 +24,7 @@ import {
  } from './../src/models/interfaces';
 import * as stubs from './stubs';
 import * as os from 'os';
+import { LanguageClient } from 'vscode-languageclient';
 
 // CONSTANTS //////////////////////////////////////////////////////////////////////////////////////
 const ncp = require('copy-paste');
@@ -36,18 +36,17 @@ const standardSelection: ISelectionData = {startLine: 0, endLine: 0, startColumn
 suite('Query Runner tests', () => {
 
     let testSqlOutputContentProvider: TypeMoq.IMock<SqlOutputContentProvider>;
-    let testSqlToolsServerClient: TypeMoq.IMock<SqlToolsServerClient>;
+    let testSqlToolsServerClient: TypeMoq.IMock<LanguageClient>;
     let testQueryNotificationHandler: TypeMoq.IMock<QueryNotificationHandler>;
     let testVscodeWrapper: TypeMoq.IMock<VscodeWrapper>;
     let testStatusView: TypeMoq.IMock<StatusView>;
 
     setup(() => {
         testSqlOutputContentProvider = TypeMoq.Mock.ofType(SqlOutputContentProvider, TypeMoq.MockBehavior.Loose, {extensionPath: ''});
-        testSqlToolsServerClient = TypeMoq.Mock.ofType(SqlToolsServerClient, TypeMoq.MockBehavior.Loose);
+        testSqlToolsServerClient = TypeMoq.Mock.ofType(LanguageClient, TypeMoq.MockBehavior.Loose);
         testQueryNotificationHandler = TypeMoq.Mock.ofType(QueryNotificationHandler, TypeMoq.MockBehavior.Loose);
         testVscodeWrapper = TypeMoq.Mock.ofType(VscodeWrapper, TypeMoq.MockBehavior.Loose);
         testStatusView = TypeMoq.Mock.ofType(StatusView, TypeMoq.MockBehavior.Loose);
-
     });
 
     test('Constructs properly', () => {
@@ -656,7 +655,7 @@ suite('Query Runner tests', () => {
  * @param returnCallback Function to execute when query execute request is called
  */
 function setupStandardQueryRequestServiceMock(
-    testSqlToolsServerClient: TypeMoq.IMock<SqlToolsServerClient>,
+    testSqlToolsServerClient: TypeMoq.IMock<LanguageClient>,
     returnCallback: (...x: any[]) => Thenable<QueryDisposeContracts.QueryDisposeResult>
 ): void {
     testSqlToolsServerClient.setup(x => x.sendRequest(TypeMoq.It.isValue(QueryExecuteContracts.QueryExecuteRequest.type), TypeMoq.It.isAny()))

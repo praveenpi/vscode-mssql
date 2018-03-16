@@ -43,8 +43,8 @@ export default class LocalWebService {
         this.server.on('request', this.app);
 
         // Handle new connections to the web socket server
-        this.wss.on('connection', (ws) => {
-            let parse = querystring.parse(url.parse(ws.upgradeReq.url).query);
+        this.wss.on('connection', (input) => {
+            let parse = querystring.parse(url.parse(input.upgradeReq.url).query);
 
             // Attempt to find the mapping for the web socket server
             let mapping = self.wsMap.get(parse.uri);
@@ -56,11 +56,11 @@ export default class LocalWebService {
             }
 
             // Assign the web socket server to the mapping
-            mapping.webSocketServer = ws;
+            mapping.webSocketServer = input;
 
             // Replay all messages to the server
             mapping.pendingMessages.forEach(m => {
-                ws.send(JSON.stringify(m));
+                input.send(JSON.stringify(m));
             });
         });
     }

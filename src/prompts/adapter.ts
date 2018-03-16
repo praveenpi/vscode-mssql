@@ -111,11 +111,11 @@ export default class CodeAdapter implements IPrompter {
         }
     }
 
-    public promptSingle<T>(question: IQuestion, ignoreFocusOut?: boolean): Promise<T> {
+    public promptSingle<T>(question: IQuestion, ignoreFocusOut?: boolean): Promise<T | false> {
         let questions: IQuestion[] = [question];
         return this.prompt(questions, ignoreFocusOut).then(answers => {
             if (answers) {
-                return answers[question.name] || false;
+                return answers[question.name] as T || false;
             }
         });
     }
@@ -153,7 +153,7 @@ export default class CodeAdapter implements IPrompter {
 
         return promptResult.catch(err => {
             if (err instanceof EscapeException || err instanceof TypeError) {
-                return;
+                return err;
             }
 
             window.showErrorMessage(err.message);

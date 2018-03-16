@@ -149,7 +149,7 @@ gulp.task('clean', function (done) {
     return del('out', done);
 });
 
-gulp.task('build', gulp.series('clean', 'html:build', 'ext:build', 'ext:install-service', 'ext:appinsights-version'));
+gulp.task('build', gulp.series('clean', 'html:build', 'ext:build', 'ext:appinsights-version'));
 
 gulp.task('install', function() {
     return gulp.src(['./package.json', './src/views/htmlcontent/package.json'])

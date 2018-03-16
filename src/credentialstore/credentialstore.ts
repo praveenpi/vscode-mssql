@@ -6,7 +6,7 @@
 
 import * as Contracts from '../models/contracts';
 import { ICredentialStore } from './icredentialstore';
-import SqlToolsServerClient from '../languageservice/serviceclient';
+import { client } from '../languageservice/serviceclient';
 import { LanguageClient } from 'vscode-languageclient';
 
 /**
@@ -18,7 +18,7 @@ export class CredentialStore implements ICredentialStore {
 
     constructor(private _client?: LanguageClient) {
         if (!this._client) {
-            this._client = SqlToolsServerClient.client;
+            this._client = client;
         }
     }
 

@@ -13,7 +13,7 @@ import { SqlOutputContentProvider } from '../models/sqlOutputContentProvider';
 import { RebuildIntelliSenseNotification } from '../models/contracts/languageService';
 import StatusView from '../views/statusView';
 import ConnectionManager from './connectionManager';
-import SqlToolsServerClient from '../languageservice/serviceclient';
+import { initialize, getServiceVersion, client } from '../languageservice/serviceclient';
 import { IPrompter } from '../prompts/question';
 import CodeAdapter from '../prompts/adapter';
 import Telemetry from '../models/telemetry';
@@ -24,7 +24,6 @@ import * as path from 'path';
 import fs = require('fs');
 
 let opener = require('opener');
-const config = require('../config.json');
 
 /**
  * The main controller class that initializes the extension
@@ -146,7 +145,7 @@ export default class MainController implements vscode.Disposable {
             // Initialize telemetry
             Telemetry.initialize(self._context);
 
-            SqlToolsServerClient.initialize(config, this._vscodeWrapper).then(serverResult => {
+            initialize().then(serverResult => {
 
                 // Init status bar
                 self._statusview = new StatusView(self._vscodeWrapper);
@@ -275,7 +274,7 @@ export default class MainController implements vscode.Disposable {
             const fileUri = this._vscodeWrapper.activeTextEditorUri;
             if (fileUri && this._vscodeWrapper.isEditingSqlFile) {
                 this._statusview.languageServiceStatusChanged(fileUri, LocalizedConstants.updatingIntelliSenseStatus);
-                SqlToolsServerClient.client.sendNotification(RebuildIntelliSenseNotification.type, {
+                client.sendNotification(RebuildIntelliSenseNotification.type, {
                     ownerUri: fileUri
                 });
             } else {
@@ -468,7 +467,7 @@ export default class MainController implements vscode.Disposable {
      * Verifies the tools service version is high enough to support certain commands
      */
     private canRunV2Command(): boolean {
-        let version: number = SqlToolsServerClient.instance.getServiceVersion();
+        let version: number = getServiceVersion();
         return version > 1;
     }
 

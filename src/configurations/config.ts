@@ -7,42 +7,21 @@
 const fs = require('fs');
 import * as path from 'path';
 import * as Constants from '../constants/constants';
-import {IConfig} from '../languageservice/interfaces';
+import {IConfig} from 'service-downloader';
+
+const baseConfig = require('../config.json');
 
 /*
 * Config class handles getting values from config.json.
 */
-export default class Config implements IConfig {
+export default class Config {
      private static _configJsonContent = undefined;
      private _sqlToolsServiceConfigKey: string;
      private version: number;
 
-     public static get configJsonContent(): any {
-        if (this._configJsonContent === undefined) {
-            this._configJsonContent = this.loadConfig();
-        }
-        return this._configJsonContent;
-    }
-
     constructor() {
         this._sqlToolsServiceConfigKey = Constants.sqlToolsServiceConfigKey;
         this.version = 2;
-    }
-
-    public getSqlToolsServiceDownloadUrl(): string {
-        return this.getSqlToolsConfigValue(Constants.sqlToolsServiceDownloadUrlConfigKey);
-    }
-
-    public getSqlToolsInstallDirectory(): string {
-        return this.getSqlToolsConfigValue(Constants.sqlToolsServiceInstallDirConfigKey);
-    }
-
-    public getSqlToolsExecutableFiles(): string[] {
-        return this.getSqlToolsConfigValue(Constants.sqlToolsServiceExecutableFilesConfigKey);
-    }
-
-    public getSqlToolsPackageVersion(): string {
-        return this.getSqlToolsConfigValue(Constants.sqlToolsServiceVersionConfigKey);
     }
 
     public useServiceVersion(version: number): void {
@@ -60,43 +39,7 @@ export default class Config implements IConfig {
         return this.version;
     }
 
-    public getSqlToolsConfigValue(configKey: string): any {
-        let json = Config.configJsonContent;
-        let toolsConfig = json[this._sqlToolsServiceConfigKey];
-        let configValue: string = undefined;
-        if (toolsConfig !== undefined) {
-            configValue = toolsConfig[configKey];
-        }
-        return configValue;
-    }
-
-    public getExtensionConfig(key: string, defaultValue?: any): any {
-       let json = Config.configJsonContent;
-       let extensionConfig = json[Constants.extensionConfigSectionName];
-       let configValue = extensionConfig[key];
-       if (!configValue) {
-           configValue = defaultValue;
-       }
-       return configValue;
-    }
-
-    public getWorkspaceConfig(key: string, defaultValue?: any): any {
-       let json = Config.configJsonContent;
-       let configValue = json[key];
-       if (!configValue) {
-           configValue = defaultValue;
-       }
-       return configValue;
-    }
-
-    static loadConfig(): any {
-        let configContent = fs.readFileSync(path.join(__dirname, '../config.json'));
-        return JSON.parse(configContent);
+    public getSqlToolsConfig(): IConfig {
+        return baseConfig[this._sqlToolsServiceConfigKey];
     }
 }
-
-
-
-
-
-

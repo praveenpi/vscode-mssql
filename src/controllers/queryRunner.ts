@@ -2,7 +2,7 @@
 import { EventEmitter } from 'events';
 
 import StatusView from '../views/statusView';
-import SqlToolsServerClient from '../languageservice/serviceclient';
+import { client } from '../languageservice/serviceclient';
 import {QueryNotificationHandler} from './queryNotificationHandler';
 import VscodeWrapper from './vscodeWrapper';
 import { BatchSummary, QueryExecuteParams, QueryExecuteRequest,
@@ -50,8 +50,8 @@ export default class QueryRunner {
                 private _client?: LanguageClient,
                 private _notificationHandler?: QueryNotificationHandler,
                 private _vscodeWrapper?: VscodeWrapper) {
-        if (!_client) {
-            this._client = SqlToolsServerClient.client;
+        if (!this._client) {
+            this._client = client;
         }
 
         if (!_notificationHandler) {

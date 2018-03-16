@@ -116,8 +116,8 @@ suite('ConnectionStore tests', () => {
 
         let credsToSave: interfaces.IConnectionProfile[];
         connectionConfig.setup(x => x.addConnection(TypeMoq.It.isAny()))
-             .returns((profile: interfaces.IConnectionProfile) => {
-                credsToSave = [profile];
+             .returns((newprofile: interfaces.IConnectionProfile) => {
+                credsToSave = [newprofile];
                 return Promise.resolve();
             });
 
@@ -143,8 +143,8 @@ suite('ConnectionStore tests', () => {
 
         let credsToSave: interfaces.IConnectionProfile[];
         connectionConfig.setup(x => x.addConnection(TypeMoq.It.isAny()))
-             .returns((profile: interfaces.IConnectionProfile) => {
-                credsToSave = [profile];
+             .returns((newprofile: interfaces.IConnectionProfile) => {
+                credsToSave = [newprofile];
                 return Promise.resolve();
             });
 
@@ -491,8 +491,8 @@ suite('ConnectionStore tests', () => {
     test('getPickListItems should display Recently Used then Profiles', (done) => {
         // Given 3 items in MRU and 2 in Profile list
         let recentlyUsed: interfaces.IConnectionCredentials[] = [];
-        for (let i = 0; i < 3; i++) {
-            recentlyUsed.push( Object.assign({}, defaultNamedProfile, { server: defaultNamedProfile.server + i}) );
+        for (let j = 0; j < 3; j++) {
+            recentlyUsed.push( Object.assign({}, defaultNamedProfile, { server: defaultNamedProfile.server + j}) );
         }
         globalstate.setup(x => x.get(Constants.configRecentConnections)).returns(key => recentlyUsed);
 

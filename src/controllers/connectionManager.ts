@@ -10,7 +10,7 @@ import Interfaces = require('../models/interfaces');
 import { ConnectionStore } from '../models/connectionStore';
 import { ConnectionUI } from '../views/connectionUI';
 import StatusView from '../views/statusView';
-import SqlToolsServerClient from '../languageservice/serviceclient';
+import { client } from '../languageservice/serviceclient';
 import { IPrompter } from '../prompts/question';
 import Telemetry from '../models/telemetry';
 import VscodeWrapper from './vscodeWrapper';
@@ -98,7 +98,7 @@ export default class ConnectionManager {
         this._connections = {};
 
         if (!this.client) {
-            this.client = SqlToolsServerClient.client;
+            this.client = client;
         }
         if (!this.vscodeWrapper) {
             this.vscodeWrapper = new VscodeWrapper();
@@ -143,8 +143,8 @@ export default class ConnectionManager {
     /**
      * Exposed for testing purposes
      */
-    public set client(client: LanguageClient) {
-        this._client = client;
+    public set client(newClient: LanguageClient) {
+        this._client = newClient;
     }
 
     /**
@@ -445,7 +445,7 @@ export default class ConnectionManager {
                     return false;
                 }
                 this.statusView.languageFlavorChanged(fileUri, flavor);
-                SqlToolsServerClient.client.sendNotification(LanguageServiceContracts.LanguageFlavorChangedNotification.type,
+                this._client.sendNotification(LanguageServiceContracts.LanguageFlavorChangedNotification.type,
                     <LanguageServiceContracts.DidChangeLanguageFlavorParams> {
                     uri: fileUri,
                     language: 'sql',

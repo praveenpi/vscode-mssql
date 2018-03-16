@@ -3,7 +3,7 @@
 *  service layer
 */
 import QueryRunner from './queryRunner';
-import SqlToolsServiceClient from '../languageservice/serviceclient';
+import { client } from '../languageservice/serviceclient';
 import {
     QueryExecuteCompleteNotification,
     QueryExecuteBatchStartNotification,
@@ -34,11 +34,11 @@ export class QueryNotificationHandler {
 
     // register the handler to handle notifications for queries
     private initialize(): void {
-        SqlToolsServiceClient.client.onNotification(QueryExecuteCompleteNotification.type, this.handleQueryCompleteNotification());
-        SqlToolsServiceClient.client.onNotification(QueryExecuteBatchStartNotification.type, this.handleBatchStartNotification());
-        SqlToolsServiceClient.client.onNotification(QueryExecuteBatchCompleteNotification.type, this.handleBatchCompleteNotification());
-        SqlToolsServiceClient.client.onNotification(QueryExecuteResultSetCompleteNotification.type, this.handleResultSetCompleteNotification());
-        SqlToolsServiceClient.client.onNotification(QueryExecuteMessageNotification.type, this.handleMessageNotification());
+        client.onNotification(QueryExecuteCompleteNotification.type, this.handleQueryCompleteNotification());
+        client.onNotification(QueryExecuteBatchStartNotification.type, this.handleBatchStartNotification());
+        client.onNotification(QueryExecuteBatchCompleteNotification.type, this.handleBatchCompleteNotification());
+        client.onNotification(QueryExecuteResultSetCompleteNotification.type, this.handleResultSetCompleteNotification());
+        client.onNotification(QueryExecuteMessageNotification.type, this.handleMessageNotification());
     }
 
     // Registers queryRunners with their uris to distribute notifications.

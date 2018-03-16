@@ -52,7 +52,7 @@ export interface IQuestionHandler {
 }
 
 export interface IPrompter {
-    promptSingle<T>(question: IQuestion, ignoreFocusOut?: boolean): Promise<T>;
+    promptSingle<T>(question: IQuestion, ignoreFocusOut?: boolean): Promise<T | boolean>;
     /**
      * Prompts for multiple questions
      *

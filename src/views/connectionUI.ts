@@ -84,7 +84,7 @@ export class ConnectionUI {
                 }, picklist)
                 .then(selection => {
                     if (selection) {
-                        resolve(self.handleSelectedConnection(selection));
+                        resolve(self.handleSelectedConnection(selection as IConnectionCredentialsQuickPickItem));
                     } else {
                         resolve(undefined);
                     }
@@ -113,7 +113,7 @@ export class ConnectionUI {
                 matchOnDescription: true
             }, picklist).then(selection => {
                 if (selection) {
-                    resolve(selection.providerId);
+                    resolve((selection as ISqlProviderItem).providerId);
                 } else {
                     resolve(undefined);
                 }
@@ -122,7 +122,7 @@ export class ConnectionUI {
     }
 
     // requests the user to choose an item from the list
-    private promptItemChoice<T extends vscode.QuickPickItem>(options: vscode.QuickPickOptions, choices: T[]): Promise<T> {
+    private promptItemChoice<T extends vscode.QuickPickItem>(options: vscode.QuickPickOptions, choices: T[]): Promise<T | boolean> {
         let question: IQuestion = {
             type: QuestionTypes.expand,
             name: 'question',
