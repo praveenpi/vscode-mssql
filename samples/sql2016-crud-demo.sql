@@ -49,7 +49,7 @@ VALUES
 (1, 'Amitabh', 'Bachchan', '1942-07-10','angry_young_man@gmail.com'),
 (2, 'Abhishek', 'Bachchan','1976-05-06', 'abhishek@abhishekbachchan.org'),
 (3, 'Aishwarya', 'Rai','1973-11-06', 'ash@gmail.com'),
-(4, 'Aamir', 'Khan','1965-04-28' 'aamir@khan.com')
+(4, 'Aamir', 'Khan','1965-04-28', 'aamir@khan.com')
 GO
 
 -- Dump records (we should have 4 records now)
